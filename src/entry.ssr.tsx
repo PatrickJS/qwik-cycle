@@ -16,6 +16,11 @@ import {
 } from "@builder.io/qwik/server";
 import { manifest } from "@qwik-client-manifest";
 import Root from "./root";
+import { SERVER_STATE } from "~/@cms/state";
+
+const STATE = {
+  appText: "hello world",
+};
 
 export default function (opts: RenderToStreamOptions) {
   return renderToStream(<Root />, {
@@ -25,6 +30,12 @@ export default function (opts: RenderToStreamOptions) {
     containerAttributes: {
       lang: "en-us",
       ...opts.containerAttributes,
+    },
+    serverData: {
+      ...opts.serverData,
+      [SERVER_STATE]: {
+        ...STATE,
+      },
     },
   });
 }

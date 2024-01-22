@@ -1,103 +1,147 @@
-import { component$ } from "@builder.io/qwik";
+import {
+  component$,
+  useOnDocument,
+  // sync$,
+  $,
+  useSignal,
+  // Slot,
+  useServerData,
+  useTask$,
+  Signal,
+  useContext,
+  useContextProvider,
+  Slot,
+  HTMLAttributes,
+} from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
+import { ServerContext } from "~/@cms/state";
 
-import Counter from "~/components/starter/counter/counter";
-import Hero from "~/components/starter/hero/hero";
-import Infobox from "~/components/starter/infobox/infobox";
-import Starter from "~/components/starter/next-steps/next-steps";
+export const EDIT_EVENT = "app_edit";
+export const CONFIRM_EVENT = "app_confirm";
+
+export interface Props {
+  bind: Signal<boolean>;
+  path: any;
+  content: any;
+}
+export const EditText = component$((props: Props) => {
+  const serverContext = useContext(ServerContext);
+  // const serverData = useServerData(SERVER_STATE, props.content);
+
+  // undefined on client after initial load even as data is transferred
+  // const serverContent = serverData[props.path];
+
+  const editMode = useSignal(false);
+  // const serverDataSignal = useSignal(serverContext.value[props.path]);
+
+  // useOnDocument(
+  //   EDIT_EVENT,
+  //   $((evt: any) => {
+  //     console.log(EDIT_EVENT, evt.detail, serverDataSignal.value);
+  //     if (evt.detail.type === "edit") {
+  //       editMode.value = true;
+  //     } else if (evt.detail.type === "confirm") {
+  //       editMode.value = false;
+  //     }
+  //     editMode.value = editMode.value;
+  //   }),
+  // );
+
+  useTask$(({ track }) => {
+    track(editMode);
+    // track(serverDataSignal);
+    track(props.bind);
+    editMode.value = props.bind.value;
+    console.log(
+      "task editMode.value",
+      editMode.value,
+      serverContext.value[props.path],
+    );
+  });
+  // useOnDocument(
+  //   CONFIRM_EVENT,
+  //   $((evt: any) => {
+  //     console.log(CONFIRM_EVENT, evt);
+  //     editMode.value = false;
+  //     console.log("editMode.value", editMode.value, serverDataSignal.value);
+  //   }),
+  // );
+
+  if (editMode.value === true) {
+    return (
+      <span
+        // @ts-ignore
+        contentEditable={editMode.value ? "plaintext-only" : "false"}
+        onInput$={(evt, target) => {
+          console.log("input enter", target?.textContent);
+        }}
+        onKeyDown$={(evt: any) => {
+          console.log(
+            "key down",
+            evt.key,
+            evt.code,
+            evt.keyCode,
+            evt.which,
+            evt,
+          );
+        }}
+      >
+        {props.content}
+      </span>
+    );
+  } else if (editMode.value === false && serverContext.value[props.path]) {
+    return serverContext.value[props.path];
+  }
+  return props.content;
+});
+
+interface TextProps {
+  bind: Signal<boolean>;
+  path: string;
+  children: any;
+}
+export function Text({ bind, path, children }: TextProps) {
+  return <EditText bind={bind} path={path} content={children} />;
+}
 
 export default component$(() => {
+  const editMode = useSignal(false);
+  useOnDocument(
+    EDIT_EVENT,
+    $((evt: any) => {
+      editMode.value = evt.detail;
+      console.log("editMode.value", editMode.value, evt.detail);
+    }),
+  );
   return (
-    <>
-      <Hero />
-      <Starter />
-
-      <div role="presentation" class="ellipsis"></div>
-      <div role="presentation" class="ellipsis ellipsis-purple"></div>
-
-      <div class="container container-center container-spacing-xl">
-        <h3>
-          You can <span class="highlight">count</span>
-          <br /> on me
-        </h3>
-        <Counter />
+    <div class="m-5">
+      <div>
+        <button
+          onClick$={() => {
+            const detail = true;
+            document.dispatchEvent(new CustomEvent(EDIT_EVENT, { detail }));
+            console.log("clicked", EDIT_EVENT, detail);
+          }}
+        >
+          Edit
+        </button>
+        <button
+          onClick$={() => {
+            const detail = false;
+            document.dispatchEvent(new CustomEvent(EDIT_EVENT, { detail }));
+            console.log("clicked", EDIT_EVENT, detail);
+          }}
+        >
+          Confirm
+        </button>
       </div>
-
-      <div class="container container-flex">
-        <Infobox>
-          <div q:slot="title" class="icon icon-cli">
-            CLI Commands
-          </div>
-          <>
-            <p>
-              <code>npm run dev</code>
-              <br />
-              Starts the development server and watches for changes
-            </p>
-            <p>
-              <code>npm run preview</code>
-              <br />
-              Creates production build and starts a server to preview it
-            </p>
-            <p>
-              <code>npm run build</code>
-              <br />
-              Creates production build
-            </p>
-            <p>
-              <code>npm run qwik add</code>
-              <br />
-              Runs the qwik CLI to add integrations
-            </p>
-          </>
-        </Infobox>
-
-        <div>
-          <Infobox>
-            <div q:slot="title" class="icon icon-apps">
-              Example Apps
-            </div>
-            <p>
-              Have a look at the <a href="/demo/flower">Flower App</a> or the{" "}
-              <a href="/demo/todolist">Todo App</a>.
-            </p>
-          </Infobox>
-
-          <Infobox>
-            <div q:slot="title" class="icon icon-community">
-              Community
-            </div>
-            <ul>
-              <li>
-                <span>Questions or just want to say hi? </span>
-                <a href="https://qwik.builder.io/chat" target="_blank">
-                  Chat on discord!
-                </a>
-              </li>
-              <li>
-                <span>Follow </span>
-                <a href="https://twitter.com/QwikDev" target="_blank">
-                  @QwikDev
-                </a>
-                <span> on Twitter</span>
-              </li>
-              <li>
-                <span>Open issues and contribute on </span>
-                <a href="https://github.com/BuilderIO/qwik" target="_blank">
-                  GitHub
-                </a>
-              </li>
-              <li>
-                <span>Watch </span>
-                <a href="https://qwik.builder.io/media/" target="_blank">
-                  Presentations, Podcasts, Videos, etc.
-                </a>
-              </li>
-            </ul>
-          </Infobox>
-        </div>
+      <div class="flex flex-col">
+        <div>lol</div>
+        <Text bind={editMode} path="appText">
+          Loading... hello world
+        </Text>
       </div>
-    </>
+    </div>
   );
 });
 
@@ -106,7 +150,7 @@ export const head: DocumentHead = {
   meta: [
     {
       name: "description",
-      content: "Qwik site description",
+      content: "Qwik Cycle",
     },
   ],
 };
